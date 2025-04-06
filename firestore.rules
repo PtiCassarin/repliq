@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Fonction pour vérifier si l'utilisateur est admin
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email.matches('.*admin@.*');
+    }
+
+    // Règles pour la collection books
+    match /books/{bookId} {
+      allow read: if true;  // Tout le monde peut lire les livres
+      allow write: if isAdmin();  // Seuls les admins peuvent modifier
+    }
+    
+    // Règles pour les demandes
+    match /requests/{requestId} {
+      allow read: if request.auth != null;  // Utilisateurs authentifiés peuvent lire
+      allow create: if request.auth != null;  // Utilisateurs authentifiés peuvent créer
+      allow update: if isAdmin();  // Seuls les admins peuvent modifier
+    }
+    
+    // Règles pour la bibliothèque des utilisateurs
+    match /users/{userId}/library/{bookId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;  // L'utilisateur peut gérer sa propre bibliothèque
+    }
+  }
+} 

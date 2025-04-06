@@ -1,70 +1,81 @@
-# Getting Started with Create React App
+# Repliq - Application de Gestion de Livres Numériques
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Cette application permet aux utilisateurs de récupérer une version numérique d'un livre qu'ils possèdent déjà en version physique, en utilisant leur ticket de caisse comme preuve d'achat.
 
-## Available Scripts
+## Fonctionnalités
 
-In the project directory, you can run:
+### Côté Client
+- Upload de tickets de caisse
+- Visualisation des demandes en cours
+- Accès à une bibliothèque personnelle de livres numériques
 
-### `npm start`
+### Côté Admin
+- Gestion des demandes utilisateurs
+- Administration des livres disponibles
+- Validation des tickets de caisse
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Technologies Utilisées
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+- React.js
+- Firebase (Authentication, Firestore)
+- Tailwind CSS
+- React Router
 
-### `npm test`
+## Installation
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+1. Clonez le repository
+```bash
+git clone [URL_DU_REPO]
+cd my-project
+```
 
-### `npm run build`
+2. Installez les dépendances
+```bash
+npm install
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+3. Configurez les variables d'environnement
+- Copiez le fichier `.env.example` en `.env`
+- Remplissez les variables avec vos informations Firebase
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+4. Lancez l'application
+```bash
+npm start
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Configuration Firebase
 
-### `npm run eject`
+1. Créez un projet sur [Firebase Console](https://console.firebase.google.com)
+2. Activez l'authentification par email/mot de passe
+3. Créez une base de données Firestore
+4. Configurez les règles de sécurité Firestore :
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /books/{bookId} {
+      allow read: if true;
+      allow write: if request.auth != null && 
+                  request.auth.token.email.matches('.*admin@.*');
+    }
+    
+    match /requests/{requestId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && 
+                   !request.auth.token.email.matches('.*admin@.*');
+      allow update: if request.auth != null && 
+                   request.auth.token.email.matches('.*admin@.*');
+    }
+  }
+}
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Comptes de Test
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+- Admin : admin@repliq.com / admin123
+- Client : client@repliq.com / client123
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## Contribution
 
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Les pull requests sont les bienvenues. Pour les changements majeurs, veuillez d'abord ouvrir une issue pour discuter de ce que vous aimeriez changer.

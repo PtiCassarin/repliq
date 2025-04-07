@@ -15,6 +15,8 @@ const RequestsList = () => {
 
   useEffect(() => {
     if (user) {
+      console.log('État de l\'utilisateur dans RequestsList:', user);
+      console.log('Rôle de l\'utilisateur:', user.role);
       fetchRequests();
       fetchBooks();
     }
@@ -90,12 +92,25 @@ const RequestsList = () => {
   const handleStatusUpdate = async (requestId, newStatus) => {
     if (!user || user.role !== 'admin') {
       console.error('Accès non autorisé');
+      console.error('État de l\'utilisateur:', user);
+      console.error('Rôle de l\'utilisateur:', user?.role);
       return;
     }
 
     try {
+      console.log('Tentative de mise à jour du statut pour la demande:', requestId);
+      console.log('Utilisateur actuel:', user);
+      console.log('Est administrateur:', user.role === 'admin');
+      
+      // Vérifier si l'utilisateur est dans la liste des administrateurs
+      const configRef = doc(db, 'config', 'admin_emails');
+      const configDoc = await getDoc(configRef);
+      console.log('Document admin_emails:', configDoc.data());
+      
       const requestRef = doc(db, 'requests', requestId);
       const request = requests.find(r => r.id === requestId);
+      
+      console.log('Demande trouvée:', request);
       
       if (newStatus === 'approved' && request.matchedBook) {
         // Récupérer toutes les informations du livre depuis la collection books
@@ -103,7 +118,7 @@ const RequestsList = () => {
         const bookDoc = await getDoc(bookRef);
         const bookData = bookDoc.data();
         
-        console.log('Données du livre à ajouter:', bookData); // Log des données du livre
+        console.log('Données du livre à ajouter:', bookData);
 
         // Préparer les données du livre en s'assurant qu'il n'y a pas de valeurs undefined
         const libraryBookData = {
@@ -122,21 +137,30 @@ const RequestsList = () => {
           libraryBookData.summary = bookData.summary;
         }
 
+        console.log('Tentative d\'ajout du livre à la bibliothèque de l\'utilisateur:', request.userId);
+        
         // Ajouter le livre à la bibliothèque de l'utilisateur
         const userLibraryRef = collection(db, 'users', request.userId, 'library');
         const docRef = await addDoc(userLibraryRef, libraryBookData);
         
-        console.log('Livre ajouté à la bibliothèque avec ID:', docRef.id); // Log de confirmation
+        console.log('Livre ajouté à la bibliothèque avec ID:', docRef.id);
       }
 
+      console.log('Tentative de mise à jour du statut de la demande');
       await updateDoc(requestRef, {
         status: newStatus,
         updatedAt: new Date()
       });
       
+      console.log('Statut de la demande mis à jour avec succès');
       fetchRequests();
     } catch (error) {
       console.error('Erreur lors de la mise à jour du statut:', error);
+      console.error('Détails de l\'erreur:', {
+        code: error.code,
+        message: error.message,
+        stack: error.stack
+      });
     }
   };
 

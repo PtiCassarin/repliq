@@ -3,7 +3,10 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Fonction pour vérifier si l'utilisateur est admin
     function isAdmin() {
-      return request.auth != null && request.auth.token.email.matches('.*admin@.*');
+      let adminDoc = get(/databases/$(database)/documents/config/admin_emails);
+      let adminEmails = adminDoc.data.emails;
+      return request.auth != null && 
+             request.auth.token.email in adminEmails;
     }
 
     // Règles pour la collection books
@@ -16,10 +19,7 @@ service cloud.firestore {
     match /requests/{requestId} {
       allow read: if request.auth != null;  // Utilisateurs authentifiés peuvent lire
       allow create: if request.auth != null;  // Utilisateurs authentifiés peuvent créer
-      allow update: if request.auth != null && (
-        isAdmin() || 
-        resource.data.userId == request.auth.uid
-      );  // Les admins et le propriétaire de la demande peuvent modifier
+      allow update: if isAdmin();  // Seuls les admins peuvent modifier
       allow delete: if isAdmin();  // Seuls les admins peuvent supprimer
     }
     
@@ -30,18 +30,30 @@ service cloud.firestore {
         request.auth.uid == userId ||  // L'utilisateur peut ajouter des livres à sa bibliothèque
         isAdmin()  // Les admins peuvent ajouter des livres à la bibliothèque de n'importe quel utilisateur
       );
-      allow update, delete: if request.auth != null && request.auth.uid == userId;  // L'utilisateur peut gérer sa propre bibliothèque
+      allow update, delete: if request.auth != null && (
+        request.auth.uid == userId ||  // L'utilisateur peut gérer sa propre bibliothèque
+        isAdmin()  // Les admins peuvent aussi gérer la bibliothèque
+      );
     }
 
     // Règles pour la collection users
     match /users/{userId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null && (
+        request.auth.uid == userId ||  // L'utilisateur peut créer son propre document
+        isAdmin()  // Les admins peuvent créer des documents pour n'importe quel utilisateur
+      );
       allow update: if request.auth != null && (
         request.auth.uid == userId ||
         isAdmin()
       );
       allow delete: if isAdmin();
+    }
+
+    // Règles pour la collection config
+    match /config/{document} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
     }
   }
 } 

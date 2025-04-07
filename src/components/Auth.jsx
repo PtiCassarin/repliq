@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { auth } from '../config/firebase';
+import { auth, db } from '../config/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export default function Auth({ onLogin }) {
   const [email, setEmail] = useState('');
@@ -9,6 +10,52 @@ export default function Auth({ onLogin }) {
   const [error, setError] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
+
+  const initializeAdminEmails = async () => {
+    try {
+      const configRef = doc(db, 'config', 'admin_emails');
+      const configDoc = await getDoc(configRef);
+      
+      if (!configDoc.exists()) {
+        console.log('Initialisation de la collection admin_emails');
+        await setDoc(configRef, {
+          emails: ['admin@repliq.com']
+        });
+        console.log('Collection admin_emails initialisée avec succès');
+      } else {
+        // Vérifier si emails est un tableau, sinon le convertir
+        const currentData = configDoc.data();
+        if (typeof currentData.emails === 'string') {
+          console.log('Conversion de emails en tableau');
+          await setDoc(configRef, {
+            emails: [currentData.emails]
+          });
+          console.log('Collection admin_emails mise à jour avec succès');
+        } else {
+          console.log('Collection admin_emails existe déjà avec la bonne structure:', currentData);
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'initialisation de admin_emails:', error);
+    }
+  };
+
+  const checkAdminStatus = async (email) => {
+    try {
+      const configRef = doc(db, 'config', 'admin_emails');
+      const configDoc = await getDoc(configRef);
+      
+      if (configDoc.exists()) {
+        const adminEmails = configDoc.data().emails || [];
+        console.log('Emails administrateurs:', adminEmails);
+        return adminEmails.includes(email);
+      }
+      return false;
+    } catch (error) {
+      console.error('Erreur lors de la vérification du statut admin:', error);
+      return false;
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,13 +67,18 @@ export default function Auth({ onLogin }) {
       const user = userCredential.user;
       console.log('Connexion réussie:', user);
       
+      // Si c'est le premier admin qui se connecte, initialiser la collection
+      if (email === 'admin@repliq.com') {
+        await initializeAdminEmails();
+      }
+      
       // Vérifier le rôle de l'utilisateur
-      const role = email.includes('admin') ? 'admin' : 'client';
-      console.log('Rôle détecté:', role);
+      const isAdminUser = await checkAdminStatus(user.email);
+      console.log('Est administrateur:', isAdminUser);
       
       const userData = {
         email: user.email,
-        role: role,
+        role: isAdminUser ? 'admin' : 'client',
         uid: user.uid
       };
       
@@ -34,7 +86,7 @@ export default function Auth({ onLogin }) {
       onLogin(userData);
 
       // Redirection en fonction du rôle
-      if (role === 'admin') {
+      if (isAdminUser) {
         navigate('/requests');
       } else {
         navigate('/new-request');

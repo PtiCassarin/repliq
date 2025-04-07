@@ -149,7 +149,8 @@ const RequestsList = () => {
       console.log('Tentative de mise à jour du statut de la demande');
       await updateDoc(requestRef, {
         status: newStatus,
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        adminEmail: user.email
       });
       
       console.log('Statut de la demande mis à jour avec succès');
@@ -264,6 +265,11 @@ const RequestsList = () => {
               request.status === 'approved' ? 'text-green-600' : 'text-red-600'
             }`}>
               Statut: {request.status === 'approved' ? 'Approuvé' : 'Refusé'}
+            </p>
+          )}
+          {request.adminEmail && (
+            <p className="text-gray-600 text-sm mt-1">
+              Traité par: {request.adminEmail}
             </p>
           )}
         </div>
